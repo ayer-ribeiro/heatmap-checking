@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heatmap Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/heatmap.js@2.0.5/build/heatmap.min.js"></script>
+    <style>
+        #heatmapContainer {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+
+<div id="heatmapContainer" style="width: 1000px; height: 1000px;">
+    <canvas id="heatmapCanvas"></canvas>
+</div>
+
+<script>
+
+    // Converts { x, y } format to [x, y] format
+    function convertToKMeansFormat(points) {
+        return points.map(point => [point.x, point.y]);
+    }
+
+    // Converts [x, y] format to { x, y } format
+    function convertFromKMeansFormat(points) {
+        return points.map(point => ({ x: point[0], y: point[1] }));
+    }
+    function distance(a, b) {
+        return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2);
+    }
+
+    function computeCentroid(points) {
+        if (points.length === 0) {
+            return null;  // handle empty input
+        }
+        let totalX = 0, totalY = 0;
+
+        for (let point of points) {
+            totalX += point[0];
+            totalY += point[1];
+        }
+
+        return [totalX / points.length, totalY / points.length];
+    }
+
+    function kMeans(data, k) {
+        // Randomly select k initial centroids
+        let centroids = [];
+        let shuffledData = [...data].sort(() => 0.5 - Math.random());
+        for (let i = 0; i < k; i++) {
+            centroids.push(shuffledData[i]);
+        }
+
+        let assignments = new Array(data.length);
+        let changed = true;
+
+        while (changed) {
+            // Assign each point to the nearest centroid
+            for (let i = 0; i < data.length; i++) {
+                let minDistance = Infinity;
+                for (let j = 0; j < k; j++) {
+                    let d = distance(data[i], centroids[j]);
+                    if (d < minDistance) {
+                        minDistance = d;
+                        assignments[i] = j;
+                    }
+                }
+            }
+
+            // Compute new centroids and check for convergence
+            changed = false;
+            for (let j = 0; j < k; j++) {
+                let clusterPoints = data.filter((_, index) => assignments[index] === j);
+                if (clusterPoints.length > 0) {
+                    let newCentroid = computeCentroid(clusterPoints);
+                    if (distance(newCentroid, centroids[j]) > 0.00001) {
+                        centroids[j] = newCentroid;
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        // Return final clusters
+        let clusters = Array.from({ length: k }, () => []);
+        for (let i = 0; i < data.length; i++) {
+            clusters[assignments[i]].push(data[i]);
+        }
+
+        return clusters;
+    }
+
+    function nearestCentroidDistance(point, points) {
+        let minDistance = Infinity;
+
+        for (let k = 1; k <= 3; k++) {
+            const clusters = kMeans(points, k);
+            for (let cluster of clusters) {
+                let centroid = computeCentroid(cluster);
+                if (centroid) {  // Ensure the centroid is not null
+                    let d = distance(point, centroid);
+                    if (d < minDistance) {
+                        minDistance = d;
+                    }
+                } else {
+                    console.error("Empty cluster found:", cluster);
+                }
+            }
+        }
+
+        return minDistance;
+    }
+
+    function isWithinTolerance(tolerance, point, points) {
+        const dist = nearestCentroidDistance(point, points);
+        return dist <= tolerance;
+    }
+
+    function generateRandomPoints(numPoints, min, max, size) {
+        let points = [];
+
+        // Determine a random center for the cluster of points
+        let centerX = Math.floor(Math.random() * (max - size - min + 1) + min);
+        let centerY = Math.floor(Math.random() * (max - size - min + 1) + min);
+
+        // Limit to boundaries (just to ensure we're not generating points outside the specified min/max)
+        let minX = Math.max(min, centerX - size / 2);
+        let maxX = Math.min(max, centerX + size / 2);
+        let minY = Math.max(min, centerY - size / 2);
+        let maxY = Math.min(max, centerY + size / 2);
+
+        for (let i = 0; i < numPoints; i++) {
+            points.push({
+                x: Math.floor(Math.random() * (maxX - minX + 1) + minX),
+                y: Math.floor(Math.random() * (maxY - minY + 1) + minY)
+            });
+        }
+
+        return points;
+    }
+
+    function drawSpecificPoint(point, color = 'red', radius = 5) {
+        const canvas = document.getElementById('heatmapCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI, false);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#003300';
+        ctx.stroke();
+    }
+
+    function displayHeatmap(points) {
+        // get the canvas DOM element
+        const canvas = document.getElementById('heatmapCanvas');
+
+        // create a heatmap instance with given fixed size
+        const heatmapInstance = h337.create({
+            container: document.getElementById('heatmapContainer'),
+            canvas: canvas,
+            radius: 15,
+        });
+
+        // Prepare data for the heatmap
+        const data = {
+            max: 500,
+            data: points.map(point => ({
+                x: point.x,
+                y: point.y,
+                value: 1 // or some other value based on the intensity at this point
+            }))
+        };
+
+        // Update the heatmap with the data
+        heatmapInstance.setData(data);
+    }
+
+    // Example data
+    const points1 = generateRandomPoints(150, 200, 400, 200);
+    const points2 = generateRandomPoints(150, 600, 800, 200);
+    const points = [...points1, ...points2];
+
+
+    const constAddresX = 230;
+    const constAddresY = 250;
+
+    const drawanbleSpecificPoint = { x: constAddresX, y: constAddresY };
+    const kMeansSpecificPoint = [constAddresX, constAddresY];
+
+    // Invoke the display function with the example data
+    displayHeatmap(points);
+    drawSpecificPoint(drawanbleSpecificPoint);
+    const nearestCentroidDistanceResult = nearestCentroidDistance(kMeansSpecificPoint, convertToKMeansFormat(points));
+    const result = isWithinTolerance(50, kMeansSpecificPoint, convertToKMeansFormat(points));
+    console.log(`Is the point within the tolerance? = ${result}. Distance = ${nearestCentroidDistanceResult}`);
+</script>
+
+</body>
+</html>
