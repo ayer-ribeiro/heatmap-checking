@@ -180,13 +180,12 @@
     }
 
     // Example data
-    const points1 = generateRandomPoints(150, 200, 400, 200);
-    const points2 = generateRandomPoints(150, 600, 800, 200);
+    const points1 = generateRandomPoints(150, 200, 600, 200);
+    const points2 = generateRandomPoints(150, 400, 800, 200);
     const points = [...points1, ...points2];
-
-
-    const constAddresX = 230;
-    const constAddresY = 250;
+    
+    const constAddresX = Math.floor(Math.random() * (600) + 200);
+    const constAddresY = Math.floor(Math.random() * (600) + 200);
 
     const drawanbleSpecificPoint = { x: constAddresX, y: constAddresY };
     const kMeansSpecificPoint = [constAddresX, constAddresY];
@@ -195,7 +194,7 @@
     displayHeatmap(points);
     drawSpecificPoint(drawanbleSpecificPoint);
     const nearestCentroidDistanceResult = nearestCentroidDistance(kMeansSpecificPoint, convertToKMeansFormat(points));
-    const result = isWithinTolerance(50, kMeansSpecificPoint, convertToKMeansFormat(points));
+    const result = isWithinTolerance(90, kMeansSpecificPoint, convertToKMeansFormat(points));
     console.log(`Is the point within the tolerance? = ${result}. Distance = ${nearestCentroidDistanceResult}`);
 </script>
 
